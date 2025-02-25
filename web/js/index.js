@@ -5,33 +5,39 @@ function getAuthCode() {
     return code;
 }
 
-const getAccessToken = async (code) => {
-    const verificationCode = getCookie("catGallaryCognitoCodeChallenge");
-
+const getAccessToken = async (grant_type,code=null) => {
     let data = {
-        grant_type: "authorization_code",
+        grant_type: grant_type,
         client_id: "2t4vj8qe2792pfcj8jhj5cih6r",
-        code: code,
-        code_verifier: verificationCode,
-        redirect_uri: "http://localhost:8080"
     };
+
+    if (grant_type == "authorization_code") {
+        const verificationCode = getCookie("catGallaryCognitoCodeChallenge");
+        data.code = code;
+        data.code_verifier = verificationCode;
+        data.redirect_uri = "http://localhost:8080";
+    } else if (grant_type == "refresh_token") {
+        data.refresh_token = localStorage.getItem("refresh_token");
+    }
 
     let formBody = new URLSearchParams(data).toString();
 
-    fetch(`/auth/oauth2/token`, {
+    let response = await fetch(`/auth/oauth2/token`, {
         method: "POST",
         body: formBody,
         headers: {
             "Content-Type": "application/x-www-form-urlencoded",
         }
     })
-    .then((response) => response.json())
-    .then((json) => {
-        localStorage.setItem("id_token", json.id_token);
-        localStorage.setItem("access_token", json.access_token);
-        localStorage.setItem("refresh_token", json.refresh_token);
-        console.log(json);
-    });
+    response = await response.json();
+    localStorage.setItem("id_token", response.id_token);
+    localStorage.setItem("access_token", response.access_token);
+    
+    if (grant_type == "authorization_code") {
+        localStorage.setItem("refresh_token", response.refresh_token);
+    }
+    
+    console.log(response);
 }
 
 // Generate a random code verifier
@@ -97,34 +103,82 @@ function parseJwtPayload(token) {
 
 function validIdToken() {
     const idToken = localStorage.getItem("id_token");
+    console.log(`Id token: ${idToken}`);
     
     if (idToken == null || idToken == "undefined") {
         return false;
     }
     
-    let tokenPayload = parseJwtPayload(idToken);
-    let dateObj = new Date(tokenPayload.exp * 1000);
-    
-    console.log(dateObj.getTime());
-    
-    return dateObj.getTime() < new Date().getTime();
+    const tokenPayload = parseJwtPayload(idToken);
+    const expDate = new Date(tokenPayload.exp * 1000);
+    const dateNow = new Date();
+    console.log(`Time now: ${dateNow.toString()}`);
+    console.log(`Exp time: ${expDate.toString()}`);
+    console.log(dateNow.getTime() < expDate.getTime());
+    return dateNow.getTime() < expDate.getTime();
 }
 
 function refreshToken() {
-    return false;
+    const refreshToken = localStorage.getItem("refresh_token");
+    
+    if (refreshToken == null || refreshToken == "undefined") {
+        return false;
+    }
+
+    getAccessToken("refresh_token");
+    return validIdToken();
+    
 }
 
 function displayContent() {
-    console.log("Success");
+    let imageContainers = "";
+
+    for(let i = 1; i < 10; i++) {
+        imageContainers += /*html*/`
+            <div class="m-3">
+              <img src="images/cat${i}.jpeg" alt="cat${i} image" style="max-width: 250px;"></img>
+            </div>
+        `
+    }
+
+    const content = /*html*/`
+        <div class="d-flex justify-content-center mt-5">
+            <div class="d-flex flex-row flex-wrap bg-secondary mx-4" style="max-width: 100rem;">
+            ${imageContainers}
+            </div>
+        </div>
+    `
+    document.getElementById("container").innerHTML = content;
 }
 
-function entry() {
+function displaySignin() {
+    
+    const signIn = /*html*/`
+        <div id="signin">
+            <div class="d-flex justify-content-center p-3" style="margin-top: 8rem;">
+                <div class="card bg-secondary d-flex justify-content-center align-items-center" style="width: 18rem; height: 10rem;">
+                    <p class="text-light">Sign into AWS Cognito</p>
+                    <button class="btn btn-primary" style="width: 10rem;" onclick="signInRedirect()">Sign in</button>
+                </div>
+            </div>
+        </div>
+    `
+    document.getElementById("container").innerHTML = signIn;
+}
+
+async function entry() {
     if(validIdToken() || refreshToken()) {
         displayContent();
     } else {
         let code = getAuthCode();
         if(code) {
-            getAccessToken(getAuthCode(code));
+            console.log("Found code!")
+            await getAccessToken("authorization_code", getAuthCode(code));
+            if (validIdToken()) {
+                displayContent();
+            }
+        } else {
+            displaySignin();
         } 
     }
 }
