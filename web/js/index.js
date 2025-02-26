@@ -81,6 +81,13 @@ const signInRedirect = async () => {
     window.location.href = `https://us-west-2n9yh2zkeq.auth.us-west-2.amazoncognito.com/login?client_id=2t4vj8qe2792pfcj8jhj5cih6r&response_type=code&scope=email+openid+phone&redirect_uri=http://localhost:8080&code_challenge=${codeCallenge}&code_challenge_method=S256`;
 }
 
+const signOutRedirect = async () => {
+    localStorage.removeItem("access_token");
+    localStorage.removeItem("id_token");
+    localStorage.removeItem("refresh_token");
+    window.location.href = `http://localhost:8080`;
+}
+
 function getCookie(name) {
     const cookieString = document.cookie;
     const cookies = cookieString.split(';');
@@ -118,19 +125,21 @@ function validIdToken() {
     return dateNow.getTime() < expDate.getTime();
 }
 
-function refreshToken() {
+async function refreshToken() {
     const refreshToken = localStorage.getItem("refresh_token");
     
     if (refreshToken == null || refreshToken == "undefined") {
         return false;
     }
 
-    getAccessToken("refresh_token");
+    await getAccessToken("refresh_token");
     return validIdToken();
     
 }
 
 function displayContent() {
+    const username = parseJwtPayload(localStorage.getItem("access_token")).username;
+    console.log(username);
     let imageContainers = "";
 
     for(let i = 1; i < 10; i++) {
@@ -143,8 +152,14 @@ function displayContent() {
 
     const content = /*html*/`
         <div class="d-flex justify-content-center mt-5">
-            <div class="d-flex flex-row flex-wrap bg-secondary mx-4" style="max-width: 100rem;">
-            ${imageContainers}
+            <div class="d-flex flex-column">
+                <div class="d-flex justify-content-between m-4 ">
+                    <h2>Hello ${username}</h2>
+                    <button type="button" class="btn btn-outline-primary" onclick="signOutRedirect()">Sign out</button>
+                </div>
+                <div class="d-flex flex-row flex-wrap bg-secondary mx-4" style="max-width: 100rem;">
+                ${imageContainers}
+                </div>
             </div>
         </div>
     `
@@ -167,7 +182,7 @@ function displaySignin() {
 }
 
 async function entry() {
-    if(validIdToken() || refreshToken()) {
+    if(validIdToken() || await refreshToken()) {
         displayContent();
     } else {
         let code = getAuthCode();
