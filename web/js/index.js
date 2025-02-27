@@ -1,4 +1,4 @@
-import OAuthClient from "./OAuthClient";
+import OAuthClient from "./OAuthClient.js";
 
 function getAuthCode() {
     let params = new URLSearchParams(document.location.search);
@@ -78,8 +78,7 @@ const createCodeChallenge = async () => {
 }
 
 const signInRedirect = async () => {
-    let codeCallenge = await createCodeChallenge();
-
+    const codeCallenge = await OAuthClient.createCodeChallenge();
     window.location.href = `https://us-west-2n9yh2zkeq.auth.us-west-2.amazoncognito.com/login?client_id=2t4vj8qe2792pfcj8jhj5cih6r&response_type=code&scope=email+openid+phone&redirect_uri=http://localhost:8080&code_challenge=${codeCallenge}&code_challenge_method=S256`;
 }
 
@@ -188,7 +187,7 @@ async function entry() {
     const authenicated = await oauthClient.authenticate();
 
     if (!authenicated) {
-        displaySignin(oauthClient.createCodeChallenge());
+        displaySignin();
         return;
     }
 

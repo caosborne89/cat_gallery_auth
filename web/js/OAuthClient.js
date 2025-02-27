@@ -1,4 +1,6 @@
-import OIDCClient from "./OIDCClient";
+import OIDCClient from "./OIDCClient.js";
+import IdToken from "./IdToken.js";
+import Token from "./Token.js";
 
 export default class OAuthClient {
     #idToken;
@@ -16,11 +18,11 @@ export default class OAuthClient {
     }
 
     async #authenticated() {
-        if (this.#idToken.isValid()) {
+        if (this.#idToken && this.#idToken.isValid()) {
             return true;
         }
 
-        if (!this.#refreshToken.isValid()) {
+        if (!this.#refreshToken || !this.#refreshToken.isValid()) {
             return false;
         }
 
@@ -41,15 +43,14 @@ export default class OAuthClient {
             return true;
         }
 
-        let token = this.#getAuthCode();
+        const code = this.#getAuthCode();
 
-        if (!token) {
+        if (!code) {
             return false;
         }
 
-        const verificationCode = getCookie("catGallaryCognitoCodeChallenge");
-
-        const response = this.#oidcClient.getTokens();
+        const verificationCode = this.#getCookie("catGallaryCognitoCodeChallenge");
+        const response = this.#oidcClient.getTokens(code,verificationCode);
 
         if (response.error || !response.access_token || !response.id_token || !response.refresh_token) {
             return false;
@@ -72,10 +73,32 @@ export default class OAuthClient {
         }
         return null;
     }
+    
+    static async #sha256(codeVerifier) {
+        const encoder = new TextEncoder();
+        const data = encoder.encode(codeVerifier);
+        const hashBuffer = await crypto.subtle.digest('SHA-256', data);
+        const hashArray = Array.from(new Uint8Array(hashBuffer));
+        const base64Url = btoa(String.fromCharCode(...hashArray))
+            .replace(/\+/g, '-')
+            .replace(/\//g, '_')
+            .replace(/=+$/, '');
+        return base64Url;
+    }
 
-    async createCodeChallenge() {
-        const codeVerifier = generateCodeVerifier();
-        const hashedCodeVerifier = await sha256(codeVerifier);
+    static #generateCodeVerifier() {
+        const characters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
+        let codeVerifier = '';
+        for (let i = 0; i < 128; i++) {
+            codeVerifier += characters.charAt(crypto.getRandomValues(new Uint32Array(1))[0] % characters.length);
+        }
+    
+        return codeVerifier;
+    }
+
+    static async createCodeChallenge() {
+        const codeVerifier = this.#generateCodeVerifier();
+        const hashedCodeVerifier = await this.#sha256(codeVerifier);
         const now = new Date();
         now.setDate(now.getDate() + (5 * 1000));
         const expirationDate = now.toUTCString();
@@ -89,8 +112,12 @@ export default class OAuthClient {
     }
 
     #setTokens() {
-        this.#idToken = new IdToken(localStorage.getItem(this.ID_TOKEN_KEY));
-        this.#accessToken = new Token(localStorage.getItem(this.ACCESS_TOKEN_KEY));
-        this.#refreshToken = new Token(localStorage.getItem(this.REFRESH_TOKEN_KEY));
+        const idTokenJwt = localStorage.getItem(this.ID_TOKEN_KEY);
+        const accessTokenJwt = localStorage.getItem(this.ACCESS_TOKEN_KEY);
+        const refreshTokenJwt = localStorage.getItem(this.REFRESH_TOKEN_KEY);
+
+        this.#idToken = idTokenJwt ? new IdToken(idTokenJwt) : null;
+        this.#accessToken = accessTokenJwt ? new IdToken(accessTokenJwt) : null;
+        this.#refreshToken = refreshTokenJwt ? new IdToken(refreshTokenJwt) : null;
     }
 }

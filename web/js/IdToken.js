@@ -1,4 +1,4 @@
-import Token from "./Token";
+import Token from "./Token.js";
 
 export default class IdToken extends Token {
     constructor(jwt) {

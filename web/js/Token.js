@@ -1,7 +1,7 @@
 export default class Token {
     constructor(jwt) {
         this.jwt = jwt;
-        this.payload = this.#parseJwtPayload(jwt);
+        this.payload = jwt ? this.#parseJwtPayload(jwt) : null;
     }
 
     #parseJwtPayload(jwt) {
