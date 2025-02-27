@@ -1,3 +1,5 @@
+import OAuthClient from "./OAuthClient";
+
 function getAuthCode() {
     let params = new URLSearchParams(document.location.search);
     let code = params.get("code");
@@ -182,20 +184,31 @@ function displaySignin() {
 }
 
 async function entry() {
-    if(validIdToken() || await refreshToken()) {
-        displayContent();
-    } else {
-        let code = getAuthCode();
-        if(code) {
-            console.log("Found code!")
-            await getAccessToken("authorization_code", getAuthCode(code));
-            if (validIdToken()) {
-                displayContent();
-            }
-        } else {
-            displaySignin();
-        } 
+    const oauthClient = new OAuthClient("2t4vj8qe2792pfcj8jhj5cih6r", "http://localhost:8080", "/auth");
+    const authenicated = await oauthClient.authenticate();
+
+    if (!authenicated) {
+        displaySignin(oauthClient.createCodeChallenge());
+        return;
     }
+
+    displayContent();
+
+
+    // if(validIdToken() || await refreshToken()) {
+    //     displayContent();
+    // } else {
+    //     let code = getAuthCode();
+    //     if(code) {
+    //         console.log("Found code!")
+    //         await getAccessToken("authorization_code", getAuthCode(code));
+    //         if (validIdToken()) {
+    //             displayContent();
+    //         }
+    //     } else {
+    //         displaySignin();
+    //     } 
+    // }
 }
 
 entry();
