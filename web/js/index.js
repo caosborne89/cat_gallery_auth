@@ -5,26 +5,14 @@ const signInRedirect = async () => {
     window.location.href = `https://us-west-2n9yh2zkeq.auth.us-west-2.amazoncognito.com/login?client_id=2t4vj8qe2792pfcj8jhj5cih6r&response_type=code&scope=email+openid+phone&redirect_uri=http://localhost:8080&code_challenge=${codeCallenge}&code_challenge_method=S256`;
 }
 
-const signOutRedirect = async () => {
+const signOutRedirect = () => {
     localStorage.removeItem("access_token");
     localStorage.removeItem("id_token");
     localStorage.removeItem("refresh_token");
     window.location.href = `http://localhost:8080`;
 }
 
-async function refreshToken() {
-    const refreshToken = localStorage.getItem("refresh_token");
-    
-    if (refreshToken == null || refreshToken == "undefined") {
-        return false;
-    }
-
-    await getAccessToken("refresh_token");
-    return validIdToken();
-    
-}
-
-function displayContent() {
+const displayContent = () => {
     const username = "Anonymous";
     let imageContainers = "";
 
@@ -53,7 +41,7 @@ function displayContent() {
     document.getElementById("signoutButton").addEventListener("click", signOutRedirect);
 }
 
-function displaySignin() {
+const displaySignin = () => {
     const signIn = /*html*/`
         <div id="signin">
             <div class="d-flex justify-content-center p-3" style="margin-top: 8rem;">
@@ -68,7 +56,7 @@ function displaySignin() {
     document.getElementById("signinButton").addEventListener("click", signInRedirect);
 }
 
-async function entry() {
+const entry = async () => {
     const oauthClient = new OAuthClient("2t4vj8qe2792pfcj8jhj5cih6r", "http://localhost:8080", "/auth");
     const authenicated = await oauthClient.authenticate();
 
