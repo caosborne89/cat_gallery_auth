@@ -1,6 +1,8 @@
-export default class Token {
+import Token from "./Token.js";
+
+export default class ParsablePayloadToken extends Token {
     constructor(jwt) {
-        this.jwt = jwt;
+        super(jwt);
         this.payload = jwt ? this.#parseJwtPayload(jwt) : null;
     }
 
@@ -9,9 +11,5 @@ export default class Token {
         const payload = parts[1];
         const decodedPayload = JSON.parse(atob(payload));
         return decodedPayload;
-    }
-
-    isValid() {
-        return !(this.jwt == null || this.jwt == "undefined");
     }
 }

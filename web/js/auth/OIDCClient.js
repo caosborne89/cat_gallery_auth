@@ -30,17 +30,13 @@ export default class OIDCClient {
             code: code,
             redirect_uri: this.#returnUrl
         }
-        
+
         return await this.#tokenRequest(data);
     }
 
     async refreshTokens(refreshToken) {
-        if (!refreshToken.isValid()) {
-            return {};
-        }
-
         const data = {
-            grant_type: "refreshrefresh_token",
+            grant_type: "refresh_token",
             client_id: this.#clientId,
             refresh_token: refreshToken
         }

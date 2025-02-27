@@ -1,6 +1,7 @@
 import OIDCClient from "./OIDCClient.js";
 import IdToken from "./IdToken.js";
 import Token from "./Token.js";
+import ParsablePayloadToken from "./ParsablePayloadToken.js";
 
 export default class OAuthClient {
     #idToken;
@@ -8,9 +9,9 @@ export default class OAuthClient {
     #refreshToken;
     #oidcClient;
 
-    static ID_TOKEN_KEY = "id_token";
-    static ACCESS_TOKEN_KEY = "access_token";
-    static REFRESH_TOKEN_KEY = "access_token";
+    #ID_TOKEN_KEY = "id_token";
+    #ACCESS_TOKEN_KEY = "access_token";
+    #REFRESH_TOKEN_KEY = "refresh_token";
 
     constructor(clientID, redirectUrl, endPointUrl) {
         this.#setTokens();
@@ -26,14 +27,14 @@ export default class OAuthClient {
             return false;
         }
 
-        const response = await this.#oidcClient.refreshTokens();
+        const response = await this.#oidcClient.refreshTokens(this.#refreshToken.jwt);
 
         if (response.error == "invalid_grant" || !response.access_token || !response.id_token) {
             return false;
         }
 
-        localStorage.setItem(this.ID_TOKEN_KEY, response.id_token);
-        localStorage.setItem(this.ACCESS_TOKEN_KEY, response.access_token);
+        localStorage.setItem(this.#ID_TOKEN_KEY, response.id_token);
+        localStorage.setItem(this.#ACCESS_TOKEN_KEY, response.access_token);
 
         return true;
     }
@@ -50,15 +51,19 @@ export default class OAuthClient {
         }
 
         const verificationCode = this.#getCookie("catGallaryCognitoCodeChallenge");
-        const response = this.#oidcClient.getTokens(code,verificationCode);
+        const response = await this.#oidcClient.getTokens(code,verificationCode);
 
         if (response.error || !response.access_token || !response.id_token || !response.refresh_token) {
             return false;
         }
 
-        localStorage.setItem(this.ID_TOKEN_KEY, response.id_token);
-        localStorage.setItem(this.ACCESS_TOKEN_KEY, response.access_token);
-        localStorage.setItem(this.ACCESS_TOKEN_KEY, response.refresh_token);
+        localStorage.setItem(this.#ID_TOKEN_KEY, response.id_token);
+        localStorage.setItem(this.#ACCESS_TOKEN_KEY, response.access_token);
+        localStorage.setItem(this.#REFRESH_TOKEN_KEY, response.refresh_token);
+        
+        this.#setTokens();
+
+        return this.#idToken.isValid();
     }
 
     #getCookie(name) {
@@ -112,12 +117,12 @@ export default class OAuthClient {
     }
 
     #setTokens() {
-        const idTokenJwt = localStorage.getItem(this.ID_TOKEN_KEY);
-        const accessTokenJwt = localStorage.getItem(this.ACCESS_TOKEN_KEY);
-        const refreshTokenJwt = localStorage.getItem(this.REFRESH_TOKEN_KEY);
+        const idTokenJwt = localStorage.getItem(this.#ID_TOKEN_KEY);
+        const accessTokenJwt = localStorage.getItem(this.#ACCESS_TOKEN_KEY);
+        const refreshTokenJwt = localStorage.getItem(this.#REFRESH_TOKEN_KEY);
 
         this.#idToken = idTokenJwt ? new IdToken(idTokenJwt) : null;
-        this.#accessToken = accessTokenJwt ? new IdToken(accessTokenJwt) : null;
-        this.#refreshToken = refreshTokenJwt ? new IdToken(refreshTokenJwt) : null;
+        this.#accessToken = accessTokenJwt ? new ParsablePayloadToken(accessTokenJwt) : null;
+        this.#refreshToken = refreshTokenJwt ? new Token(refreshTokenJwt) : null;
     }
 }
