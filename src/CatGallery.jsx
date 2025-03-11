@@ -1,7 +1,8 @@
 import CatImage from "./CatImage";
 import data from "./data";
 import { useEffect, useState } from 'react';
-import { getCurrentUser, signOut } from 'aws-amplify/auth';
+import { getCurrentUser, signOut, fetchUserAttributes } from 'aws-amplify/auth';
+import { Hub } from 'aws-amplify/utils';
 
 export default function CatGallery() {
     const images = data.map(catImageData => (
@@ -13,8 +14,8 @@ export default function CatGallery() {
     const [username, setUser] = useState(null);
     useEffect(() => {
         const fetchCurrentUser = async () => {
-            const { username, userId, signInDetails } = await getCurrentUser();
-            setUser(signInDetails.loginId);
+            const { email } = await fetchUserAttributes();
+            setUser(email);
         };
     
         fetchCurrentUser();
