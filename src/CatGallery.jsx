@@ -2,7 +2,7 @@ import CatImage from "./CatImage";
 import data from "./data";
 import { useEffect, useState } from 'react';
 import { getCurrentUser, signOut, fetchUserAttributes } from 'aws-amplify/auth';
-import { Hub } from 'aws-amplify/utils';
+import { FileUploader } from '@aws-amplify/ui-react-storage';
 
 export default function CatGallery() {
     const images = data.map(catImageData => (
@@ -26,6 +26,7 @@ export default function CatGallery() {
     }
     
     return (
+        <>
         <div className="d-flex justify-content-center mt-5">
             <div className="d-flex flex-column">
                 <div className="d-flex justify-content-between m-4 ">
@@ -37,6 +38,12 @@ export default function CatGallery() {
                 </div>
             </div>
         </div>
+        <FileUploader
+            acceptedFileTypes={['.html']}
+            path="picture-submissions/"
+            maxFileCount={1}
+        />
+        </>
     )
     
 }
